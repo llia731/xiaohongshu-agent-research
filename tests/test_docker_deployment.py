@@ -25,8 +25,17 @@ class DockerDeploymentTests(unittest.TestCase):
         compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
         self.assertIn("ARG PIP_INDEX_URL=", dockerfile)
         self.assertIn('--index-url "${PIP_INDEX_URL}"', dockerfile)
-        self.assertIn("pypi.tuna.tsinghua.edu.cn/simple", compose)
+        self.assertIn("mirrors.aliyun.com/pypi/simple/", compose)
         self.assertIn("PIP_INDEX_URL:", compose)
+
+    def test_isolated_python_environment(self):
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        self.assertIn("python3.12-venv", dockerfile)
+        self.assertIn("python3 -m venv /opt/venv", dockerfile)
+        self.assertIn('PATH="/opt/venv/bin:$PATH"', dockerfile)
+        self.assertIn("type=cache,target=/root/.cache/pip", dockerfile)
+        self.assertIn("python -m pip check", dockerfile)
+        self.assertNotIn("--ignore-installed", dockerfile.split("RUN --mount=")[-1].split("COPY . /app")[0])
 
     def test_gui_services(self):
         entry = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
