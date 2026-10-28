@@ -1,10 +1,70 @@
-# Xiaohongshu Agent Knowledge Research
+# 小红书 Agent 面试知识研究
 
-用于研究指定知识分享型博主公开且可合法使用的小红书笔记，并整理 Agent 面试内容。
+目标：整理“程序员峰哥”（小红书用户 ID：`63572290000000001901d19a`）在可访问、可合法使用范围内发布的 Agent 面试相关笔记，并建立有原帖出处的研究材料。
 
-- **Target creator ID**: `63572290000000001901d19a`（程序员峰哥）
-- **Upstream**: [NanmiCoder/MediaCrawler](https://github.com/NanmiCoder/MediaCrawler)
-- **Default mode**: Environment diagnostics and local-data processing; no unattended authenticated crawling.
-- **License note**: MediaCrawler has its own non-commercial license. Comply with both its license and Xiaohongshu terms. This repo does not vendor the upstream source.
+> **状态与边界**：仓库中包含真实的 GitHub Actions 自动环境测试，但不包含已验证成功的小红书爬取结果。GitHub 托管运行器没有你本地小红书的登录会话；不能把无人值守登录视作已解决。
 
-See other files in this repository for the commands and CI results.
+## 架构
+
+- [NanmiCoder/MediaCrawler](https://github.com/NanmiCoder/MediaCrawler) 用于获取有权访问和使用的帖子；本项目不复制其源代码。
+- `scripts/configure_mediacrawler.py`：将指定博主与少量采集配置写入本地克隆的 MediaCrawler。
+- `scripts/filter_agent_posts.py`：对上游导出的 `creator_contents_*.jsonl` 去重、筛选和整理。
+- `scripts/diagnose_env.py`：只读检查 Python、uv、Node、Chrome 与 DNS。
+- `.github/workflows/ci.yml`：每次 push 自动测试筛选流程，并尝试安装固定版本的上游依赖。
+
+固定 MediaCrawler 提交：`68d9ef1c1da22eab75940dfd7cec259907006538`，减少以后上游变更引起的兼容性问题。
+
+## Windows 本地启动（有权限使用目标数据时）
+
+1. 安装 Git、Python 3.11+、[uv](https://docs.astral.sh/uv/getting-started/installation) 和 Node.js。准备可以访问小红书的 Chrome 浏览器。上游当前推荐 Chrome 144 或以上版本，并在 `chrome://inspect/#remote-debugging` 启用远程调试。
+2. 在本仓库根目录新建 `.local` 文件夹，在 `.local/profile_url.txt` 中填写你在浏览器地址栏复制的**完整**目标主页链接。需要含 `xsec_token` 与 `xsec_source`，并保持用户 ID 为 `63572290000000001901d19a`。**不要提交 URL、Cookie、验证码或登录状态到 GitHub。**
+3. 在 PowerShell 运行：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\run_local.ps1
+```
+
+首次运行可能要求在你自己的浏览器完成小红书登录或授权；脚本不绕过验证。
+
+如果已经取得媒体素材的使用许可且确实需要图片、视频，可改为：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\run_local.ps1 -DownloadMedia
+```
+
+脚本最多尝试读取目标博主前 20 篇可获取的帖子，关闭评论采集，并使用单并发和间隔请求。**此限制只是首次验证，不是全部历史帖子。**
+
+输出位于 `outputs/`：
+- `all_posts.csv`：已采集帖子元数据（不是博主的全部历史帖子）。
+- `agent_interview_candidates.csv`：标题、描述或标签包含面试相关关键词的候选帖。
+- `image_review_queue.csv`：需要进一步识别图片或视频内容的候选资料。
+- `analysis_input.jsonl`：后续 AI 结构化分析的输入。
+- `summary.json`：数量统计、来源与过滤结果。
+
+**注意**：小红书知识类笔记常把面试问题写在图片里。当前筛选只搜索标题、正文描述和标签，不会自动 OCR 图片和转写视频。即使输出为空，也不代表该博主没有 Agent 面试帖子。
+
+## 仅运行离线数据分析
+
+你也可以把通过授权导出的 `creator_contents_*.jsonl` 文件放在本地，直接运行：
+
+```powershell
+python scripts/filter_agent_posts.py --input-file "C:\path\to\creator_contents.jsonl" --output-dir outputs
+```
+
+不需要登录小红书。你也可以将生成的 Excel 或 JSONL 数据提供给 ChatGPT，进一步分析观点、论据和知识体系。
+
+## GitHub Actions
+
+本仓库的 Actions 在 push 时自动执行：
+1. 单元测试（包含去重、关键词分类和 URL 校验）。
+2. 托管运行器环境诊断并上传 `environment-report` Artifact。
+3. 检出上游 MediaCrawler 固定版本，尝试 `uv sync` 和 `main.py --help`。
+
+**不自动采集小红书用户数据**，因为 GitHub-hosted runners 没有本地授权会话，也不适合存放长期 Cookie 或无人值守绕过登录。
+
+## 安全与合规
+
+- 本仓库使用私有权限；`.gitignore` 排除 `.local/`、`vendor/`、`data/`、`outputs/` 和 `.env`。
+- 不要上传 Cookies、登录二维码、手机号、一次性验证码等认证资料。
+- MediaCrawler 的许可证为 `NON-COMMERCIAL LEARNING LICENSE 1.1`，并非通用自由软件许可证；必须遵守其非商业用途限制、平台规则与内容权利要求。
+- 不使用代理池、自动通过验证码、绕过访问控制或高频抓取作为故障处理策略。
