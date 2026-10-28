@@ -68,3 +68,18 @@ python scripts/filter_agent_posts.py --input-file "C:\path\to\creator_contents.j
 - 不要上传 Cookies、登录二维码、手机号、一次性验证码等认证资料。
 - MediaCrawler 的许可证为 `NON-COMMERCIAL LEARNING LICENSE 1.1`，并非通用自由软件许可证；必须遵守其非商业用途限制、平台规则与内容权利要求。
 - 不使用代理池、自动通过验证码、绕过访问控制或高频抓取作为故障处理策略。
+
+
+## GitHub Actions 手动二维码登录（可选）
+
+当匿名浏览返回 `AUTH_REQUIRED` 时，**优先使用扫码**，无需输入手机号或 Cookie。
+
+1. 在私有仓库的 **Actions** 页面，选中 **Manual QR login probe (single run only)**，点击 **Run workflow**。
+2. 此工作流只在手动触发时启动。如果小红书返回安全限制，运行会直接停止；这不是登录弹窗，不能通过不断扫码解决。
+3. 如果正常登录页面出现二维码，工作流会上传临时 `qr-login-challenge` Artifact，并在该次运行的 Summary 提供链接。下载解压后，用手机小红书 App 扫码确认。**二维码是短期身份验证挑战，只有有权限进入私有仓库的人员可以查看。**
+4. 同一次任务等待扫码，成功后尝试打开指定博主主页并读取少量可见帖子卡片，结果保存在 `qr-login-result` Artifact。**不上传 Cookies、浏览器配置、长期凭证，也不保证能够访问帖子详情。**
+5. 二维码可能先于等待时间过期；需要时只能由用户重新手动启动。扫码会话不会跨 GitHub Actions 任务持久化，每次新的运行都可能需要扫码。
+
+推荐顺序：`Hosted browser research (no login)` → 若明确要求登录，手动启动 `Manual QR login probe (single run only)`。若是 `ACCESS_RESTRICTED`，直接停止；不尝试代理绕过或验证码自动化。
+
+⚠️ **安全提示**：用于扫码的图片会暂存为 GitHub Artifact，设置保留 1 天。GitHub 仓库虽然是私有的，但能访问该运行记录的仓库协作者在有效期内也可能取得二维码。切勿将其分享到公共场所或外部聊天。授权过程中只运行已经审核的工作流代码。

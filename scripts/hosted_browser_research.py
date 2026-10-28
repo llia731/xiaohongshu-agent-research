@@ -6,6 +6,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse, urljoin
+from scripts.auth_policy import decide_auth_action
 
 URL = "https://www.xiaohongshu.com/user/profile/63572290000000001901d19a"
 SELECTOR = 'a[href*="/explore/"], a[href*="/discovery/item/"]'
@@ -115,6 +116,7 @@ def inspect(mode, output, maximum):
                 context.close()
         finally:
             browser.close()
+    report["next_auth_action"] = decide_auth_action(report.get("detail_state") or report.get("page_state") or "UNKNOWN").action
     report["visible_card_count"] = len(cards)
     with (output / "visible_cards.jsonl").open("w", encoding="utf-8") as f:
         for card in cards.values():
