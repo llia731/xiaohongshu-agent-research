@@ -15,6 +15,12 @@ class AuthenticationPolicyTests(unittest.TestCase):
     def test_stop_security(self):
         self.assertEqual(decide_auth_action("ACCESS_RESTRICTED").action, "STOP")
         self.assertEqual(decide_auth_action("UNKNOWN").action, "STOP_AND_INSPECT")
+
+    def test_qr_states_are_distinguished(self):
+        self.assertEqual(decide_auth_action("QR_READY").action, "WAIT_FOR_USER_SCAN")
+        self.assertEqual(decide_auth_action("LOGIN_UI_NO_QR").action, "CAPTURE_LOGIN_DIAGNOSTICS")
+        self.assertEqual(decide_auth_action("LOGIN_EXPIRED").action, "REQUEST_NEW_MANUAL_RUN")
+        self.assertEqual(decide_auth_action("AUTHENTICATED").action, "CONTINUE_AUTHENTICATED")
     def test_state_metadata_contains_no_secrets(self):
         with tempfile.TemporaryDirectory() as tmp:
             publish(Path(tmp), "QR_READY", reason="scan")
