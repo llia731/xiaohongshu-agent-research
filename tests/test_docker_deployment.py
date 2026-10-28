@@ -20,6 +20,14 @@ class DockerDeploymentTests(unittest.TestCase):
         self.assertIn("playwright==1.56.0", requirements)
         self.assertIn("USER pwuser", dockerfile)
 
+    def test_configurable_pypi_mirror(self):
+        dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+        compose = (ROOT / "compose.yaml").read_text(encoding="utf-8")
+        self.assertIn("ARG PIP_INDEX_URL=", dockerfile)
+        self.assertIn('--index-url "${PIP_INDEX_URL}"', dockerfile)
+        self.assertIn("pypi.tuna.tsinghua.edu.cn/simple", compose)
+        self.assertIn("PIP_INDEX_URL:", compose)
+
     def test_gui_services(self):
         entry = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
         self.assertIn("Xvfb :99", entry)

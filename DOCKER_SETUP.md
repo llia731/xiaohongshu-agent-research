@@ -20,6 +20,35 @@
 
 这是 Microsoft 官方 Playwright 镜像，包含 Chromium 和 Linux 依赖。下载可能较大，请先确认服务器网络和磁盘空间。
 
+## 2.1 构建时遇到 pip 网络中断的处理
+
+如果 Docker 在安装 streamlit 阶段出现 ConnectionResetError 或 No matching distribution，
+通常是当前 PyPI 源不可达，不应直接判断 streamlit 版本不存在。
+
+项目现在支持构建参数 PIP_INDEX_URL，Compose 默认使用清华 PyPI 镜像，
+镜像源地址为 https://pypi.tuna.tsinghua.edu.cn/simple 。
+
+在下载最新项目后先单独验证镜像源能否从容器访问：
+
+    sudo docker run --rm mcr.microsoft.com/playwright/python:v1.56.0-noble python -m pip index versions streamlit -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+如果该源正常，直接执行：
+
+    sudo docker compose build --progress=plain researcher
+    sudo docker compose up -d
+
+如果容器无法连接清华源，可以尝试经许可的其他源。例如阿里云：
+
+    sudo PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ docker compose build --progress=plain researcher
+    sudo docker compose up -d
+
+也可以用官方源覆盖，不会修改宿主机的全局 pip 配置：
+
+    sudo PIP_INDEX_URL=https://pypi.org/simple docker compose build --progress=plain researcher
+
+不要添加 --trusted-host 禁用证书验证，也不要把登录凭证放进镜像源 URL。
+如果镜像源仍无法连接，请先检查服务器 Docker 容器的 DNS、HTTPS 与代理设置。
+
 ## 3. 更新项目并启动
 
 必须先下载 GitHub 仓库最新 ZIP 或 git pull。之前上传的旧 ZIP 未包含 Dockerfile 和 compose.yaml。
