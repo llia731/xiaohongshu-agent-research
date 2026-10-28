@@ -382,9 +382,32 @@ def run(output: Path, timeout_seconds: int) -> None:
                 initial = inspect_page(page, context)
                 if initial["state"] == "PUBLIC_ACCESS":
                     count = extract_visible_cards(page, output, "public_visible_card")
-                    publish(output, "PUBLIC_ACCESS", visible_card_count=max(count, 0),
-                            reason="等待页面稳定后确认可匿名访问。", diagnostics=initial)
-                    return
+                    if count >= 0:
+                        publish(output, "PUBLIC_ACCESS", visible_card_count=count,
+                                reason="等待页面稳定后确认可匿名访问。", diagnostics=initial)
+                        return
+                    initial = inspect_page(page, context)
+                if initial["state"] == "LOGIN_PROMPT":
+                    dismissed_after_wait = dismiss_login_prompt(page)
+                    page.wait_for_timeout(800)
+                    after_close = inspect_page(page, context)
+                    if after_close["state"] == "ACCESS_RESTRICTED":
+                        publish(output, "ACCESS_RESTRICTED", reason=after_close["reason"], diagnostics=after_close)
+                        return
+                    if after_close["state"] in {"PUBLIC_ACCESS", "AUTHENTICATED"}:
+                        count = extract_visible_cards(
+                            page, output,
+                            "authenticated_visible_card" if after_close["state"] == "AUTHENTICATED" else "public_visible_card",
+                        )
+                        if count >= 0:
+                            publish(output, after_close["state"], visible_card_count=count,
+                                    reason="等待页面稳定后关闭普通登录提示，内容仍可访问。",
+                                    login_prompt_dismissed=dismissed_after_wait, diagnostics=after_close)
+                            return
+                    initial = after_close
+                    if initial["state"] == "UNKNOWN":
+                        initial = {**initial, "state": "AUTH_REQUIRED",
+                                   "reason": "页面稳定后出现登录提示，关闭后仍无可见帖子。"}
                 if initial["state"] not in {"AUTH_REQUIRED", "LOGIN_PROMPT"}:
                     publish(output, "PAGE_STATE_UNCLEAR",
                             reason="页面没有明确要求登录，也没有可验证的公开帖子卡片；不自动触发登录。",
