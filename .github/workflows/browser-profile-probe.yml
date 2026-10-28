@@ -1,0 +1,33 @@
+name: Browser UI check of Xiaohongshu profile (no login)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe_browser_profile.py'
+      - '.github/workflows/browser-profile-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Playwright browser control
+        run: python -m pip install playwright==1.56.0
+      - name: Browse public profile and click at most one visible note
+        run: python scripts/probe_browser_profile.py --output browser_probe.json --screenshots-dir browser_screenshots
+      - name: Publish results and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-browser-probe
+          path: |
+            browser_probe.json
+            browser_screenshots/
