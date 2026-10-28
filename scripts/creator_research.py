@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import shutil
 from datetime import datetime
 from pathlib import Path
 from time import monotonic
@@ -169,9 +170,17 @@ def run(raw_url: str, focus: str, max_notes: int, out_root: Path, use_ai: bool) 
         # Dedicated local profile; do not point this at your regular Chrome user profile.
         profile_dir = Path(".local/browser_profile").resolve()
         profile_dir.mkdir(parents=True, exist_ok=True)
+        # Windows usually has Google Chrome installed; on Linux, use installed
+        # Chrome when present, otherwise the Playwright-managed Chromium.
+        channel_opts = (
+            {"channel": "chrome"}
+            if sys.platform == "win32" or shutil.which("google-chrome") or shutil.which("google-chrome-stable")
+            else {}
+        )
         context = p.chromium.launch_persistent_context(
-            user_data_dir=str(profile_dir), channel="chrome",
+            user_data_dir=str(profile_dir),
             headless=False, locale="zh-CN", viewport={"width": 1440, "height": 900},
+            **channel_opts,
         )
         try:
             page = context.pages[0] if context.pages else context.new_page()
