@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   qr-session:
-    if: \${{ github.event.repository.private == true }}
+    if: ${{ github.event.repository.private == true }}
     runs-on: ubuntu-24.04
     timeout-minutes: 6
     steps:
@@ -55,7 +55,7 @@ jobs:
           echo "challenge_ready=false" >> "$GITHUB_OUTPUT"
           echo "auth_complete=false" >> "$GITHUB_OUTPUT"
       - name: Upload time-limited QR code (private repository only)
-        if: \${{ steps.prepare.outputs.challenge_ready == 'true' }}
+        if: ${{ steps.prepare.outputs.challenge_ready == 'true' }}
         id: qr_artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,16 +64,16 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Show scan instructions
-        if: \${{ steps.prepare.outputs.challenge_ready == 'true' }}
+        if: ${{ steps.prepare.outputs.challenge_ready == 'true' }}
         env:
-          ARTIFACT_URL: \${{ steps.qr_artifact.outputs.artifact-url }}
+          ARTIFACT_URL: ${{ steps.qr_artifact.outputs.artifact-url }}
         run: |
           echo "### 小红书二维码扫码授权（仅当前运行有效）" >> "$GITHUB_STEP_SUMMARY"
           echo "1. 打开 [二维码文件]($ARTIFACT_URL)，下载解压。" >> "$GITHUB_STEP_SUMMARY"
           echo "2. 使用小红书 App 尽快扫码并确认登录。" >> "$GITHUB_STEP_SUMMARY"
           echo "3. 返回本次运行查看结果。登录状态不会上传或跨任务保存。" >> "$GITHUB_STEP_SUMMARY"
       - name: Allow time for QR scan
-        if: \${{ steps.prepare.outputs.challenge_ready == 'true' }}
+        if: ${{ steps.prepare.outputs.challenge_ready == 'true' }}
         shell: bash
         run: |
           for i in {1..160}; do
