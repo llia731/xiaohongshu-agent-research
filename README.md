@@ -1,5 +1,7 @@
 # 小红书知识博主研究
 
+> **Ubuntu Docker 部署：** [Docker 服务器部署指南](DOCKER_SETUP.md)。不需要在宿主机安装 Python venv 或 Chromium，支持通过 SSH 隧道查看容器内 Chrome 并扫码。
+
 > **Ubuntu 服务器：** 请先参照 [Linux 环境检查与部署说明](LINUX_SETUP.md) 运行网络与 Chromium 访问测试，再决定是否启动完整网页程序。
 
 > **推荐入口：** 请先阅读 [Windows 一键使用说明](QUICKSTART.md)，运行 start_windows.ps1 后在本地网页粘贴博主主页链接即可开始尝试读取。大模型自动观点报告为可选功能，需要独立配置 API Key。
