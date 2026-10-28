@@ -40,6 +40,10 @@ def probe(screenshot_dir: Path) -> dict:
                 result["profile_page_title"] = page.title()[:150]
                 result["body_text_length"] = len(page.locator("body").inner_text(timeout=3000))
                 result["login_redirected"] = urlparse(page.url).path.startswith("/login")
+                result["access_restricted"] = (
+                    urlparse(page.url).path.startswith("/website-login/error")
+                    or "安全限制" in result["profile_page_title"]
+                )
                 page.screenshot(path=str(screenshot_dir / "profile.png"), full_page=False)
 
                 links = page.locator(NOTE_LINK_SELECTORS)
@@ -72,7 +76,9 @@ def probe(screenshot_dir: Path) -> dict:
                         active.screenshot(path=str(screenshot_dir / "clicked_post.png"), full_page=False)
                     except Exception as exc:
                         result["click_error"] = f"{type(exc).__name__}: {str(exc)[:230]}"
-                if result["login_redirected"]:
+                if result["access_restricted"]:
+                    result["outcome"] = "ACCESS_RESTRICTED_BY_PLATFORM"
+                elif result["login_redirected"]:
                     result["outcome"] = "LOGIN_REQUIRED_ON_PROFILE"
                 elif result["click_attempted"]:
                     result["outcome"] = "POST_CLICK_TESTED" if not result.get("clicked_into_login") else "LOGIN_REQUIRED_ON_POST"
