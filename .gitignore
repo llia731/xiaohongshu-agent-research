@@ -1,0 +1,14 @@
+# Private or generated data
+.env
+.env.*
+!.env.example
+.local/
+vendor/
+outputs/
+data/
+*.log
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+.DS_Store

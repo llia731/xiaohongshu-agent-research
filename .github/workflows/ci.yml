@@ -1,0 +1,51 @@
+name: Verify Agent research environment
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Test offline post analysis and URL validation
+        run: python -m unittest discover -s tests -v
+      - name: Diagnose hosted runner
+        run: python scripts/diagnose_env.py --output env_report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: environment-report
+          path: env_report.json
+
+  upstream-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@v6
+      - name: Check out pinned MediaCrawler upstream
+        run: |
+          git init vendor/MediaCrawler
+          git -C vendor/MediaCrawler remote add origin https://github.com/NanmiCoder/MediaCrawler.git
+          git -C vendor/MediaCrawler fetch --depth 1 origin 68d9ef1c1da22eab75940dfd7cec259907006538
+          git -C vendor/MediaCrawler checkout --detach FETCH_HEAD
+      - name: Install upstream Python dependencies
+        working-directory: vendor/MediaCrawler
+        run: uv sync
+      - name: Check CLI startup (without network scraping)
+        working-directory: vendor/MediaCrawler
+        run: uv run main.py --help
