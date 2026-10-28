@@ -1,0 +1,12 @@
+.git
+.venv
+.local
+outputs
+data
+vendor
+__pycache__
+.pytest_cache
+*.pyc
+*.log
+.env
+.env.*

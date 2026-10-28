@@ -1,0 +1,26 @@
+name: xiaohongshu-research
+services:
+  researcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xiaohongshu-research:local
+    init: true
+    restart: unless-stopped
+    shm_size: "1gb"
+    environment:
+      HOME: /home/pwuser
+      DISPLAY: ":99"
+    ports:
+      - "127.0.0.1:8501:8501"
+      - "127.0.0.1:6080:6080"
+    volumes:
+      - browser_profile:/app/.local
+      - research_outputs:/app/outputs
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+volumes:
+  browser_profile:
+  research_outputs:
