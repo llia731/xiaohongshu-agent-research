@@ -115,3 +115,14 @@ Docker Compose 只把服务器 127.0.0.1 的端口发布出来：
 不要使用 docker compose down -v，否则会删除登录资料及研究报告。
 
 首版限制：仍未实现图片 OCR、视频转写和历史帖子的完整覆盖，未配置模型 API 时仅生成可追溯的主题与原帖索引。
+
+
+## 镜像源和 pip 缓存修复记录
+
+如果 Docker 构建显示 `Looking in indexes: https://pypi.org/simple`，表示服务器本地 Dockerfile 的默认值还是官方 PyPI，且 Compose 的构建参数没有传入。可直接强制指定构建参数：
+
+    sudo docker compose --progress plain build --build-arg PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ researcher
+
+如果同时显示 `/home/pwuser/.cache/pip ... not writable`，属于构建环境的 HOME 与 root 用户运行 pip 的缓存路径不一致。新版本在 Dockerfile 中设置 `PIP_CACHE_DIR=/root/.cache/pip`，让 BuildKit cache mount 实际生效。这是缓存警告，与连接中断是两个独立问题。
+
+不必重新拉取 Playwright 镜像，也不需要清空 Docker 构建缓存。清华源的索引可查但曾拒绝 wheel 下载，当前默认镜像源是此前可下载软件包的阿里云 PyPI。安装完成还应检查 `python -m pip check` 的结果。

@@ -15,14 +15,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements-local.txt /app/requirements-local.txt
-ARG PIP_INDEX_URL=https://pypi.org/simple
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 
 RUN python3 -m venv /opt/venv
 
 # BuildKit cache persists downloaded wheels across failed/repeated image builds.
 # No --ignore-installed or --break-system-packages: apt-managed packages remain untouched.
 RUN --mount=type=cache,target=/root/.cache/pip \
-    python -m pip install --disable-pip-version-check \
+    PIP_CACHE_DIR=/root/.cache/pip python -m pip install --disable-pip-version-check \
     --timeout 60 --retries 4 --index-url "${PIP_INDEX_URL}" \
     -r /app/requirements-local.txt \
     && python -m pip check

@@ -35,6 +35,8 @@ class DockerDeploymentTests(unittest.TestCase):
         self.assertIn('PATH="/opt/venv/bin:$PATH"', dockerfile)
         self.assertIn("type=cache,target=/root/.cache/pip", dockerfile)
         self.assertIn("python -m pip check", dockerfile)
+        self.assertIn("PIP_CACHE_DIR=/root/.cache/pip", dockerfile)
+        self.assertIn("ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/", dockerfile)
         self.assertNotIn("--ignore-installed", dockerfile.split("RUN --mount=")[-1].split("COPY . /app")[0])
 
     def test_gui_services(self):
