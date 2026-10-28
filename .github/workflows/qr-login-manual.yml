@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   qr-session:
-    if: ${{ github.event.repository.private == true }}
+    if: \${{ github.event.repository.private == true }}
     runs-on: ubuntu-24.04
     timeout-minutes: 6
     steps:
@@ -22,30 +22,40 @@ jobs:
           python-version: '3.11'
       - name: Install browser tooling
         run: python -m pip install 'playwright==1.56.0'
-      - name: Start one-time QR browser session
+      - name: Start browser and inspect current access state
         id: prepare
         shell: bash
         run: |
           mkdir -p outputs/qr
           nohup python -m scripts.github_qr_worker --output-dir outputs/qr --timeout-seconds 150 > /dev/null 2>&1 < /dev/null &
           echo $! > outputs/qr/worker.pid
-          for i in {1..35}; do
-            if [ -s outputs/qr/scan_me.png ]; then
-              echo "challenge_ready=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+          for i in {1..60}; do
             state=$(python -c 'import json,pathlib; p=pathlib.Path("outputs/qr/status.json"); print(json.loads(p.read_text()).get("state","") if p.exists() else "")' 2>/dev/null || true)
             case "$state" in
-              ACCESS_RESTRICTED|QR_UNAVAILABLE|BROWSER_ERROR)
+              QR_READY)
+                if [ -s outputs/qr/scan_me.png ]; then
+                  echo "challenge_ready=true" >> "$GITHUB_OUTPUT"
+                  echo "auth_complete=false" >> "$GITHUB_OUTPUT"
+                  exit 0
+                fi
+                ;;
+              PUBLIC_ACCESS|AUTHENTICATED)
                 echo "challenge_ready=false" >> "$GITHUB_OUTPUT"
+                echo "auth_complete=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+              ACCESS_RESTRICTED|LOGIN_UI_NO_QR|LOGIN_EXPIRED|LOGIN_TIMEOUT|BROWSER_ERROR|PAGE_STATE_UNCLEAR|AUTHENTICATED_PROFILE_UNAVAILABLE)
+                echo "challenge_ready=false" >> "$GITHUB_OUTPUT"
+                echo "auth_complete=false" >> "$GITHUB_OUTPUT"
                 exit 0
                 ;;
             esac
             sleep 1
           done
           echo "challenge_ready=false" >> "$GITHUB_OUTPUT"
+          echo "auth_complete=false" >> "$GITHUB_OUTPUT"
       - name: Upload time-limited QR code (private repository only)
-        if: ${{ steps.prepare.outputs.challenge_ready == 'true' }}
+        if: \${{ steps.prepare.outputs.challenge_ready == 'true' }}
         id: qr_artifact
         uses: actions/upload-artifact@v4
         with:
@@ -54,37 +64,49 @@ jobs:
           retention-days: 1
           if-no-files-found: error
       - name: Show scan instructions
-        if: ${{ steps.prepare.outputs.challenge_ready == 'true' }}
+        if: \${{ steps.prepare.outputs.challenge_ready == 'true' }}
         env:
-          ARTIFACT_URL: ${{ steps.qr_artifact.outputs.artifact-url }}
+          ARTIFACT_URL: \${{ steps.qr_artifact.outputs.artifact-url }}
         run: |
           echo "### 小红书二维码扫码授权（仅当前运行有效）" >> "$GITHUB_STEP_SUMMARY"
-          echo "1. 打开 [二维码文件]($ARTIFACT_URL)，下载并解压。" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. 打开 [二维码文件]($ARTIFACT_URL)，下载解压。" >> "$GITHUB_STEP_SUMMARY"
           echo "2. 使用小红书 App 尽快扫码并确认登录。" >> "$GITHUB_STEP_SUMMARY"
           echo "3. 返回本次运行查看结果。登录状态不会上传或跨任务保存。" >> "$GITHUB_STEP_SUMMARY"
       - name: Allow time for QR scan
-        if: ${{ steps.prepare.outputs.challenge_ready == 'true' }}
+        if: \${{ steps.prepare.outputs.challenge_ready == 'true' }}
         shell: bash
         run: |
           for i in {1..160}; do
             state=$(python -c 'import json,pathlib; p=pathlib.Path("outputs/qr/status.json"); print(json.loads(p.read_text()).get("state","") if p.exists() else "")' 2>/dev/null || true)
             case "$state" in
-              AUTHENTICATED|AUTHENTICATED_PROFILE_UNAVAILABLE|LOGIN_EXPIRED|ACCESS_RESTRICTED|BROWSER_ERROR|QR_UNAVAILABLE)
+              AUTHENTICATED|AUTHENTICATED_PROFILE_UNAVAILABLE|LOGIN_EXPIRED|LOGIN_TIMEOUT|ACCESS_RESTRICTED|BROWSER_ERROR)
                 echo "Final authorization state: $state"
                 exit 0
                 ;;
             esac
             sleep 1
           done
-          echo "QR task did not produce a terminal result within expected time."
+          echo "QR scan wait ended before a terminal state was recorded."
+      - name: Validate authentication or public access result
+        if: always()
+        shell: bash
+        run: |
+          state=$(python -c 'import json,pathlib; p=pathlib.Path("outputs/qr/status.json"); print(json.loads(p.read_text()).get("state","MISSING_STATUS") if p.exists() else "MISSING_STATUS")' 2>/dev/null || echo "MISSING_STATUS")
+          echo "Final state: $state"
+          case "$state" in
+            PUBLIC_ACCESS|AUTHENTICATED) exit 0 ;;
+            *)
+              echo "::error::Authentication/access verification did not complete successfully ($state). See qr-login-result artifact."
+              exit 1
+              ;;
+          esac
       - name: Publish sanitized result (never cookies or browser state)
         if: always()
+        shell: bash
         run: |
-          if [ -f outputs/qr/status.json ]; then
-            cat outputs/qr/status.json
-          fi
+          if [ -f outputs/qr/status.json ]; then cat outputs/qr/status.json; fi
           rm -f outputs/qr/scan_me.png outputs/qr/worker.pid
-      - name: Upload sanitized results
+      - name: Upload sanitized diagnostics and results
         if: always()
         uses: actions/upload-artifact@v4
         with:
