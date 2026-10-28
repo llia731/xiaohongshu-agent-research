@@ -5,6 +5,7 @@ class HostedResearchTests(unittest.TestCase):
     def test_security_state(self):
         self.assertEqual(classify_state("https://www.xiaohongshu.com/website-login/error", "小红书", ""), "ACCESS_RESTRICTED")
         self.assertEqual(classify_state("https://www.xiaohongshu.com/user/profile/x", "安全限制", ""), "ACCESS_RESTRICTED")
+        self.assertEqual(classify_state("https://www.xiaohongshu.com/user/profile/x", "程序员峰哥 - 小红书", "安全限制 IP存在风险，请切换可靠网络环境后重试 300012"), "ACCESS_RESTRICTED")
 
     def test_login_state(self):
         self.assertEqual(classify_state("https://www.xiaohongshu.com/login", "小红书", ""), "AUTH_REQUIRED")

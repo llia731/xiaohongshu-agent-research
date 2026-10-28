@@ -8,6 +8,16 @@ class AuthManagerTests(unittest.TestCase):
         self.assertEqual(result.state, "ACCESS_RESTRICTED")
         self.assertEqual(result.action, "STOP")
 
+    def test_colab_same_profile_url_contains_security_error(self):
+        result = classify_page_state(
+            "https://www.xiaohongshu.com/user/profile/63572290000000001901d19a",
+            "程序员峰哥 - 小红书",
+            "安全限制 IP存在风险，请切换可靠网络环境后重试 300012",
+            has_note_cards=False,
+        )
+        self.assertEqual(result.state, "ACCESS_RESTRICTED")
+        self.assertEqual(result.action, "STOP")
+
     def test_already_logged_in_skips_login(self):
         result = classify_page_state("https://www.xiaohongshu.com/user/profile/123",
                                     "小红书", "我的笔记", logged_in=True)

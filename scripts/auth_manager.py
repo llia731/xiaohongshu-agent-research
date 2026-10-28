@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 
 SECURITY_PATHS = ("/website-login/error", "/website-login/security")
 LOGIN_PATHS = ("/login", "/website-login/login")
-SECURITY_PHRASES = ("安全限制", "请通过安全验证", "访问受到限制", "账号存在风险")
+SECURITY_PHRASES = ("安全限制", "请通过安全验证", "访问受到限制", "账号存在风险", "IP存在风险", "IP 存在风险", "网络环境存在风险")
 LOGIN_REQUIRED_PHRASES = ("请先登录", "登录后查看", "登录后继续", "登录后可查看")
 LOGIN_PROMPT_PHRASES = ("登录即可查看", "登录后查看更多", "登录探索更多内容")
 QR_PHRASES = ("扫码登录", "二维码登录", "微信扫码")

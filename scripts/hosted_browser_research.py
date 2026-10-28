@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse, urljoin
 from scripts.auth_policy import decide_auth_action
+from scripts.auth_manager import is_security_restriction
 
 URL = "https://www.xiaohongshu.com/user/profile/63572290000000001901d19a"
 SELECTOR = 'a[href*="/explore/"], a[href*="/discovery/item/"]'
@@ -14,7 +15,7 @@ SELECTOR = 'a[href*="/explore/"], a[href*="/discovery/item/"]'
 
 def classify_state(url, title, body):
     path = urlparse(url).path
-    if path.startswith("/website-login/error") or "安全限制" in title or "请通过安全验证" in body:
+    if is_security_restriction(url, title, body):
         return "ACCESS_RESTRICTED"
     if path == "/login" or path.startswith("/login/") or path.startswith("/website-login/login"):
         return "AUTH_REQUIRED"
